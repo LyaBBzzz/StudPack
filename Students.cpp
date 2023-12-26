@@ -1,53 +1,61 @@
-﻿#include <iostream>
+#include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm>
+#include <random>
 
 class Student {
 public:
-    Student(const std::string& name) : name(name), grades({}), averageGrade(0.0) {}
+    Student(const std::string& name) : name(name), grades({}) {}
 
     void addGrade(int grade) {
         grades.push_back(grade);
-        recalculateAverageGrade();
     }
 
     bool isExcellentStudent() const {
-        return getAverageGrade() >= 4.5;
+        return !grades.empty() && std::all_of(grades.begin(), grades.end(), [](int grade) { return grade >= 4.5; });
     }
 
     const std::string& getName() const {
         return name;
     }
 
-    double getAverageGrade() const {
-        return averageGrade;
+    const std::vector<int>& getGrades() const {
+        return grades;
     }
 
 private:
-    void recalculateAverageGrade() {
-        if (grades.empty()) {
-            averageGrade = 0.0;
-            return;
-        }
-
-        double sum = 0.0;
-        for (int grade : grades) {
-            sum += grade;
-        }
-
-        averageGrade = sum / static_cast<double>(grades.size());
-    }
-
     std::string name;
     std::vector<int> grades;
-    double averageGrade;
 };
 
 class Teacher {
 public:
-    void giveGrade(Student& student, int grade) {
-        student.addGrade(grade);
+    Teacher(const std::string& name, bool goodMood) : name(name), goodMood(goodMood) {}
+
+    void giveGrade(Student& student) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+
+        int baseGrade = student.isExcellentStudent() ? getExcellentGrade(gen) : getRegularGrade(gen);
+
+        student.addGrade(baseGrade);
+    }
+
+    const std::string& getName() const {
+        return name;
+    }
+
+private:
+    std::string name;
+    bool goodMood;
+
+    int getExcellentGrade(std::mt19937& gen) const {
+        return 5;
+    }
+
+    int getRegularGrade(std::mt19937& gen) const {
+        std::uniform_int_distribution<> dis(goodMood ? 4 : 2, 5);
+        return dis(gen);
     }
 };
 
@@ -57,15 +65,26 @@ public:
         students.push_back(Student(name));
     }
 
-    void addTeacher(const std::string& name) {
-        teachers.push_back(Teacher(name));
+    void addTeacher(const std::string& name, bool goodMood) {
+        teachers.push_back(Teacher(name, goodMood));
     }
 
-    void addGrade(const std::string& studentName, const std::string& teacherName, int grade) {
+    void addGrade(const std::string& studentName, const std::string& teacherName) {
         auto studentIt = findStudent(studentName);
         auto teacherIt = findTeacher(teacherName);
         if (studentIt != students.end() && teacherIt != teachers.end()) {
-            teacherIt->giveGrade(*studentIt, grade);
+            teacherIt->giveGrade(*studentIt);
+        }
+    }
+
+    void printStudentGrades() const {
+        std::cout << "Student Grades:\n";
+        for (const Student& student : students) {
+            std::cout << student.getName() << " (Grades: ";
+            for (int grade : student.getGrades()) {
+                std::cout << grade << " ";
+            }
+            std::cout << ")\n";
         }
     }
 
@@ -73,7 +92,11 @@ public:
         std::cout << "Excellent Students:\n";
         for (const Student& student : students) {
             if (student.isExcellentStudent()) {
-                std::cout << student.getName() << " (Average Grade: " << student.getAverageGrade() << ")\n";
+                std::cout << student.getName() << " (Grades: ";
+                for (int grade : student.getGrades()) {
+                    std::cout << grade << " ";
+                }
+                std::cout << ")\n";
             }
         }
     }
@@ -104,17 +127,53 @@ int main() {
     studentManager.addStudent("Alice");
     studentManager.addStudent("Bob");
     studentManager.addStudent("Charlie");
+    studentManager.addStudent("David");
+    studentManager.addStudent("Eva");
+    studentManager.addStudent("Frank");
+    studentManager.addStudent("Grace");
+    studentManager.addStudent("Harry");
+    studentManager.addStudent("Ivy");
+    studentManager.addStudent("Jack");
+    studentManager.addStudent("Kelly");
+    studentManager.addStudent("Leo");
+    studentManager.addStudent("Mia");
+    studentManager.addStudent("Nick");
+    studentManager.addStudent("Olivia");
+    studentManager.addStudent("Paul");
+    studentManager.addStudent("Quinn");
+    studentManager.addStudent("Rachel");
+    studentManager.addStudent("Sam");
 
     // Добавляем преподавателей
-    studentManager.addTeacher("ProfessorSmith");
-    studentManager.addTeacher("DrJohnson");
+    studentManager.addTeacher("ProfessorSmith", true);  // Преподаватель в хорошем настроении
+    studentManager.addTeacher("DrJohnson", false);      // Преподаватель в плохом настроении
+    studentManager.addTeacher("MsDavis", true);         // Преподаватель в хорошем настроении
 
     // Выставляем оценки студентам
-    studentManager.addGrade("Alice", "ProfessorSmith", 5);
-    studentManager.addGrade("Bob", "DrJohnson", 4);
-    studentManager.addGrade("Charlie", "ProfessorSmith", 5);
-    studentManager.addGrade("Charlie", "ProfessorSmith", 4);
-    studentManager.addGrade("Charlie", "ProfessorSmith", 4);
+    for (int i = 0; i < 5; ++i) {
+        studentManager.addGrade("Alice", "ProfessorSmith");
+        studentManager.addGrade("Bob", "DrJohnson");
+        studentManager.addGrade("Charlie", "ProfessorSmith");
+        studentManager.addGrade("David", "MsDavis");
+        studentManager.addGrade("Eva", "ProfessorSmith");
+        studentManager.addGrade("Frank", "DrJohnson");
+        studentManager.addGrade("Grace", "ProfessorSmith");
+        studentManager.addGrade("Harry", "MsDavis");
+        studentManager.addGrade("Ivy", "DrJohnson");
+        studentManager.addGrade("Jack", "ProfessorSmith");
+        studentManager.addGrade("Kelly", "MsDavis");
+        studentManager.addGrade("Leo", "DrJohnson");
+        studentManager.addGrade("Mia", "ProfessorSmith");
+        studentManager.addGrade("Nick", "MsDavis");
+        studentManager.addGrade("Olivia", "ProfessorSmith");
+        studentManager.addGrade("Paul", "DrJohnson");
+        studentManager.addGrade("Quinn", "MsDavis");
+        studentManager.addGrade("Rachel", "ProfessorSmith");
+        studentManager.addGrade("Sam", "DrJohnson");
+    }
+
+    // Выводим оценки студентов
+    studentManager.printStudentGrades();
 
     // Выводим отличников
     studentManager.printExcellentStudents();
