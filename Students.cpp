@@ -4,7 +4,6 @@
 #include <random>
 #include <algorithm>
 
-// Класс Студент
 class Student {
 public:
     Student(const std::string& name) : name(name), grades({}) {}
@@ -30,18 +29,26 @@ private:
     std::vector<int> grades;
 };
 
-// Класс Учитель
 class Teacher {
 public:
-    Teacher(const std::string& name, bool goodMood) : name(name), goodMood(goodMood) {}
+    Teacher(const std::string& name, bool goodMood, bool alwaysGive5, bool alwaysGive2)
+        : name(name), goodMood(goodMood), alwaysGive5(alwaysGive5), alwaysGive2(alwaysGive2) {}
 
     void giveGrades(Student& student, int numGrades) {
         std::random_device rd;
         std::mt19937 gen(rd());
 
         for (int i = 0; i < numGrades; ++i) {
-            int baseGrade = student.isExcellentStudent() ? getExcellentGrade(gen) : getRegularGrade(gen);
-            student.addGrade(baseGrade);
+            if (alwaysGive5) {
+                student.addGrade(5);
+            }
+            else if (alwaysGive2) {
+                student.addGrade(2);
+            }
+            else {
+                int baseGrade = student.isExcellentStudent() ? getExcellentGrade(gen) : getRegularGrade(gen);
+                student.addGrade(baseGrade);
+            }
         }
     }
 
@@ -52,6 +59,8 @@ public:
 private:
     std::string name;
     bool goodMood;
+    bool alwaysGive5;
+    bool alwaysGive2;
 
     int getExcellentGrade(std::mt19937& gen) const {
         return 5;
@@ -63,7 +72,6 @@ private:
     }
 };
 
-// Класс Занятие
 class Lesson {
 public:
     Lesson(const std::string& teacherName, const std::vector<std::string>& studentNames, int numGradesPerStudent)
@@ -93,8 +101,8 @@ public:
         students.push_back(Student(name));
     }
 
-    void addTeacher(const std::string& name, bool goodMood) {
-        teachers.push_back(Teacher(name, goodMood));
+    void addTeacher(const std::string& name, bool goodMood, bool alwaysGive5, bool alwaysGive2) {
+        teachers.push_back(Teacher(name, goodMood, alwaysGive5, alwaysGive2));
     }
 
     void addLesson(const std::string& teacherName, const std::vector<std::string>& studentNames, int numGradesPerStudent) {
@@ -113,7 +121,15 @@ public:
                 for (const std::string& studentName : lessonIt->getStudentNames()) {
                     auto studentIt = findStudent(studentName);
                     if (studentIt != students.end()) {
-                        teacherIt->giveGrades(*studentIt, numGradesPerStudent);
+                        if (teacherName == "ProfessorAlways2") {
+                            // Только часть студентов идет на занятие к ProfessorAlways2
+                            if (rand() % 2 == 0) {
+                                teacherIt->giveGrades(*studentIt, numGradesPerStudent);
+                            }
+                        }
+                        else {
+                            teacherIt->giveGrades(*studentIt, numGradesPerStudent);
+                        }
                     }
                 }
             }
@@ -177,21 +193,26 @@ int main() {
     for (const std::string& name : studentNames) {
         studentManager.addStudent(name);
     }
-
     // Добавляем преподавателей
-    studentManager.addTeacher("ProfessorSmith", true);  // В хорошем настроении
-    studentManager.addTeacher("DrJohnson", false);      // В плохом настроении
-    studentManager.addTeacher("MsDavis", false);         // В хорошем настроении
+    studentManager.addTeacher("ProfessorSmith", true, false, false);       // В хорошем настроении
+    studentManager.addTeacher("DrJohnson", false, false, false);           // В плохом настроении
+    studentManager.addTeacher("MsDavis", true, false, false);               // В хорошем настроении
+    studentManager.addTeacher("ProfessorAlways5", true, true, false);       // Всегда ставит 5
+    studentManager.addTeacher("ProfessorAlways2", true, false, true);       // Всегда ставит 2
 
     // Добавляем занятия
     studentManager.addLesson("ProfessorSmith", studentNames, 3);  // 3 оценки на занятии
     studentManager.addLesson("DrJohnson", studentNames, 2);      // 2 оценки на занятии
     studentManager.addLesson("MsDavis", studentNames, 4);         // 4 оценки на занятии
+    studentManager.addLesson("ProfessorAlways5", studentNames, 1); // 1 оценка на занятии
+    studentManager.addLesson("ProfessorAlways2", studentNames, 1); // 1 оценка на занятии
 
     // Проводим занятия
     studentManager.conductLesson("ProfessorSmith");
     studentManager.conductLesson("DrJohnson");
     studentManager.conductLesson("MsDavis");
+    studentManager.conductLesson("ProfessorAlways5");
+    studentManager.conductLesson("ProfessorAlways2");
 
     // Выводим оценки студентов
     studentManager.printStudentGrades();
