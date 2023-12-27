@@ -32,7 +32,7 @@ private:
 class Teacher {
 public:
     Teacher(const std::string& name, bool goodMood, bool alwaysGive5, bool alwaysGive2)
-        : name(name), goodMood(goodMood), alwaysGive5(alwaysGive5), alwaysGive2(alwaysGive2) {}
+        : name(name), goodMood(goodMood), alwaysGive5(alwaysGive5), alwaysGive2(alwaysGive2), gradeCounter(0) {}
 
     void giveGrades(Student& student, int numGrades) {
         std::random_device rd;
@@ -49,6 +49,10 @@ public:
                 int baseGrade = student.isExcellentStudent() ? getExcellentGrade(gen) : getRegularGrade(gen);
                 student.addGrade(baseGrade);
             }
+            gradeCounter++;
+            if (gradeCounter % 5 == 0) {
+                changeMoodRandomly();
+            }
         }
     }
 
@@ -61,6 +65,7 @@ private:
     bool goodMood;
     bool alwaysGive5;
     bool alwaysGive2;
+    int gradeCounter;
 
     int getExcellentGrade(std::mt19937& gen) const {
         return 5;
@@ -69,6 +74,14 @@ private:
     int getRegularGrade(std::mt19937& gen) const {
         std::uniform_int_distribution<> dis(goodMood ? 4 : 2, 5);
         return dis(gen);
+    }
+
+    void changeMoodRandomly() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> dis(0, 1);
+
+        goodMood = (dis(gen) == 0);
     }
 };
 
@@ -122,7 +135,6 @@ public:
                     auto studentIt = findStudent(studentName);
                     if (studentIt != students.end()) {
                         if (teacherName == "ProfessorAlways2") {
-                            // Только часть студентов идет на занятие к ProfessorAlways2
                             if (rand() % 2 == 0) {
                                 teacherIt->giveGrades(*studentIt, numGradesPerStudent);
                             }
