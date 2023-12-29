@@ -24,6 +24,17 @@ public:
         return grades;
     }
 
+    double getAverageGrade() const {
+        if (!grades.empty()) {
+            double totalGrade = 0.0;
+            for (int grade : grades) {
+                totalGrade += static_cast<double>(grade);
+            }
+            return totalGrade / grades.size();
+        }
+        return 0.0;
+    }
+
 private:
     std::string name;
     std::vector<int> grades;
@@ -108,6 +119,90 @@ private:
     int numGradesPerStudent;
 };
 
+class Parent {
+public:
+    Parent(const std::string& name, bool goodMood) : name(name), goodMood(goodMood), children({}) {}
+
+    const std::string& getName() const {
+        return name;
+    }
+
+    void addChild(const Student& child) {
+        children.push_back(child);
+    }
+
+    void tellAboutChild(const Student& child) const {
+        std::cout << "Child " << child.getName() << ": " << (goodMood ? "Happy " : "Unhappy ")
+            << (child.isExcellentStudent() ? "Excellent" : "Not an excellent") << " student.\n";
+    }
+
+    void tellAboutRandomChild() const {
+        if (!children.empty()) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, children.size() - 1);
+            tellAboutChild(children[dis(gen)]);
+        }
+        else {
+            std::cout << "Parent " << name << " has no children to talk about.\n";
+        }
+    }
+
+    void tellAboutAllChildren() const {
+        std::vector<Student> childrenCopy = children;
+        std::cout << "Parent " << name << " says about all children:\n";
+        for (const Student& child : childrenCopy) {
+            tellAboutChild(child);
+        }
+    }
+
+    void tellAboutSpecificChild(const Student& child) const {
+        auto it = std::find_if(children.begin(), children.end(), [&child](const Student& c) {
+            return c.getName() == child.getName();
+            });
+
+        if (it != children.end()) {
+            tellAboutChild(child);
+        }
+        else {
+            std::cout << "Error: " << child.getName() << " is not a child of parent " << name << ".\n";
+        }
+    }
+
+    void tellAboutAllChildrenSummary() const {
+        std::vector<Student> childrenCopy = children;
+        std::cout << "Parent " << name << " says about all children in summary:\n";
+        if (!childrenCopy.empty()) {
+            double averageGrade = calculateAverageGrade(childrenCopy);
+            if (goodMood && averageGrade >= 4.5) {
+                std::cout << "Happy and proud of excellent children.\n";
+            }
+            else {
+                std::cout << "May express some emotions about the children.\n";
+            }
+        }
+        else {
+            std::cout << "Parent " << name << " has no children to talk about.\n";
+        }
+    }
+
+private:
+    std::string name;
+    bool goodMood;
+    std::vector<Student> children;
+
+    double calculateAverageGrade(const std::vector<Student>& children) const {
+        if (!children.empty()) {
+            double totalGrade = 0.0;
+            for (const Student& child : children) {
+                totalGrade += child.getAverageGrade();
+            }
+            return totalGrade / children.size();
+        }
+        return 0.0;
+    }
+};
+
 class StudentManager {
 public:
     void addStudent(const std::string& name) {
@@ -116,6 +211,22 @@ public:
 
     void addTeacher(const std::string& name, bool goodMood, bool alwaysGive5, bool alwaysGive2) {
         teachers.push_back(Teacher(name, goodMood, alwaysGive5, alwaysGive2));
+    }
+
+    void addParent(const std::string& name, bool goodMood) {
+        parents.push_back(Parent(name, goodMood));
+    }
+
+    void assignChildToParent(const std::string& parentName, const std::string& childName) {
+        auto parentIt = findParent(parentName);
+        auto childIt = findStudent(childName);
+
+        if (parentIt != parents.end() && childIt != students.end()) {
+            parentIt->addChild(*childIt);
+        }
+        else {
+            std::cout << "Error: Unable to assign child to parent.\n";
+        }
     }
 
     void addLesson(const std::string& teacherName, const std::vector<std::string>& studentNames, int numGradesPerStudent) {
@@ -134,17 +245,33 @@ public:
                 for (const std::string& studentName : lessonIt->getStudentNames()) {
                     auto studentIt = findStudent(studentName);
                     if (studentIt != students.end()) {
-                        if (teacherName == "ProfessorAlways2") {
-                            if (rand() % 2 == 0) {
-                                teacherIt->giveGrades(*studentIt, numGradesPerStudent);
-                            }
-                        }
-                        else {
-                            teacherIt->giveGrades(*studentIt, numGradesPerStudent);
-                        }
+                        teacherIt->giveGrades(*studentIt, numGradesPerStudent);
                     }
                 }
             }
+        }
+    }
+
+    void parentActions() const {
+        for (const Parent& parent : parents) {
+            parent.tellAboutAllChildren();
+            parent.tellAboutRandomChild();
+            std::vector<Student> childrenCopy = students;
+            if (!childrenCopy.empty()) {
+                std::random_device rd;
+                std::mt19937 gen(rd());
+                std::shuffle(childrenCopy.begin(), childrenCopy.end(), gen);
+                parent.tellAboutSpecificChild(childrenCopy.front());
+            }
+            else {
+                std::cout << "There are no students to talk about.\n";
+            }
+        }
+    }
+
+    void tellAboutAllChildrenSummary() const {
+        for (const Parent& parent : parents) {
+            parent.tellAboutAllChildrenSummary();
         }
     }
 
@@ -176,6 +303,7 @@ private:
     std::vector<Student> students;
     std::vector<Teacher> teachers;
     std::vector<Lesson> lessons;
+    std::vector<Parent> parents;
 
     std::vector<Student>::iterator findStudent(const std::string& studentName) {
         return std::find_if(students.begin(), students.end(),
@@ -188,6 +316,13 @@ private:
         return std::find_if(teachers.begin(), teachers.end(),
             [teacherName](const Teacher& teacher) {
                 return teacher.getName() == teacherName;
+            });
+    }
+
+    std::vector<Parent>::iterator findParent(const std::string& parentName) {
+        return std::find_if(parents.begin(), parents.end(),
+            [parentName](const Parent& parent) {
+                return parent.getName() == parentName;
             });
     }
 };
@@ -205,19 +340,30 @@ int main() {
     for (const std::string& name : studentNames) {
         studentManager.addStudent(name);
     }
+
     // Добавляем преподавателей
-    studentManager.addTeacher("ProfessorSmith", true, false, false);       // В хорошем настроении
-    studentManager.addTeacher("DrJohnson", false, false, false);           // В плохом настроении
-    studentManager.addTeacher("MsDavis", true, false, false);               // В хорошем настроении
-    studentManager.addTeacher("ProfessorAlways5", true, true, false);       // Всегда ставит 5
-    studentManager.addTeacher("ProfessorAlways2", true, false, true);       // Всегда ставит 2
+    studentManager.addTeacher("ProfessorSmith", true, false, false);
+    studentManager.addTeacher("DrJohnson", false, false, false);
+    studentManager.addTeacher("MsDavis", true, false, false);
+    studentManager.addTeacher("ProfessorAlways5", true, true, false);
+    studentManager.addTeacher("ProfessorAlways2", true, false, true);
+
+    // Добавляем родителей
+    studentManager.addParent("Mom", true);
+    studentManager.addParent("Dad", false);
+
+    // Привязываем детей к родителям
+    studentManager.assignChildToParent("Mom", "Alice");
+    studentManager.assignChildToParent("Mom", "Bob");
+    studentManager.assignChildToParent("Dad", "Charlie");
+    studentManager.assignChildToParent("Dad", "David");
 
     // Добавляем занятия
-    studentManager.addLesson("ProfessorSmith", studentNames, 3);  // 3 оценки на занятии
-    studentManager.addLesson("DrJohnson", studentNames, 2);      // 2 оценки на занятии
-    studentManager.addLesson("MsDavis", studentNames, 4);         // 4 оценки на занятии
-    studentManager.addLesson("ProfessorAlways5", studentNames, 1); // 1 оценка на занятии
-    studentManager.addLesson("ProfessorAlways2", studentNames, 1); // 1 оценка на занятии
+    studentManager.addLesson("ProfessorSmith", studentNames, 3);
+    studentManager.addLesson("DrJohnson", studentNames, 2);
+    studentManager.addLesson("MsDavis", studentNames, 4);
+    studentManager.addLesson("ProfessorAlways5", studentNames, 1);
+    studentManager.addLesson("ProfessorAlways2", studentNames, 1);
 
     // Проводим занятия
     studentManager.conductLesson("ProfessorSmith");
@@ -225,6 +371,10 @@ int main() {
     studentManager.conductLesson("MsDavis");
     studentManager.conductLesson("ProfessorAlways5");
     studentManager.conductLesson("ProfessorAlways2");
+
+    // Действия родителей
+    studentManager.parentActions();
+    studentManager.tellAboutAllChildrenSummary();
 
     // Выводим оценки студентов
     studentManager.printStudentGrades();
