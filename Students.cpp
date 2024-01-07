@@ -126,6 +126,23 @@ private:
 };
 
 class Parent {
+
+private:
+    std::string name;
+    bool goodMood;
+    std::vector<Student> children;
+
+    double calculateAverageGrade(const std::vector<Student>& children) const {
+        if (!children.empty()) {
+            double totalGrade = 0.0;
+            for (const Student& child : children) {
+                totalGrade += child.getAverageGrade();
+            }
+            return totalGrade / children.size();
+        }
+        return 0.0;
+    }
+
 public:
     Parent() { name = "-N-"; goodMood = true; }
     Parent(const std::string& name, bool goodMood) : name(name), goodMood(goodMood), children({}) {}
@@ -137,6 +154,7 @@ public:
     void addChild( Student& child) {
         children.push_back(child);
     }
+
 
     vector<Student> getStudents() {
         return this->children;
@@ -161,12 +179,12 @@ public:
         return false;
     }
 
-    void tellAboutChild(const Student& child) const {
+    virtual void tellAboutChild(const Student& child)  {
         std::cout << "Child " << child.getName() << ": " << (goodMood ? "Happy " : "Unhappy ")
             << (child.isExcellentStudent() ? "Excellent" : "Not an excellent") << " student.\n";
     }
 
-    void tellAboutRandomChild() const{
+    virtual void tellAboutRandomChild(){
         if (!children.empty()) {
             std::random_device rd;
             std::mt19937 gen(rd());
@@ -186,7 +204,7 @@ public:
         }
     }
 
-    void tellAboutSpecificChild(const Student& child) const {
+    virtual void tellAboutSpecificChild(const Student& child)  {
         auto it = std::find_if(children.begin(), children.end(), [&child](const Student& c) {
             return c.getName() == child.getName();
             });
@@ -199,7 +217,7 @@ public:
         }
     }
 
-    void tellAboutAllChildrenSummary() const {
+    virtual void tellAboutAllChildrenSummary() {
         std::vector<Student> childrenCopy = children;
         std::cout << "Parent " << name << " says about all children in summary:\n";
         if (!childrenCopy.empty()) {
@@ -216,41 +234,76 @@ public:
         }
     }
 
-private:
-    std::string name;
-    bool goodMood;
-    std::vector<Student> children;
+};
 
-    double calculateAverageGrade(const std::vector<Student>& children) const {
-        if (!children.empty()) {
-            double totalGrade = 0.0;
-            for (const Student& child : children) {
-                totalGrade += child.getAverageGrade();
-            }
-            return totalGrade / children.size();
-        }
-        return 0.0;
+class GrandMother : public Parent {
+public:
+
+    GrandMother() {};
+    //initialization
+    GrandMother(string name,  bool mood) : Parent(name,  mood) {};
+
+    //told about...
+     void tellAboutChild(const Student& child) override{
+        std::cout << "Child " << child.getName()<< " Excellent student.\n";
     }
+
+    void tellAboutRandomChild() override {
+        if (!getStudents().empty()) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<> dis(0, getStudents().size() - 1);
+            tellAboutChild(getStudents()[dis(gen)]);
+        }
+        else {
+            std::cout << "Parent " << getName() << " has no children to talk about.\n";
+        }
+    }
+
+    void tellAboutSpecificChild(const Student& child) override {
+        bool MaMood = getMood();
+        vector<Student> p1 = getStudents();
+        auto it = std::find_if(p1.begin(), p1.end(), [&child](const Student& c) {
+            return c.getName() == child.getName();
+            });
+
+        if (it != p1.end()) {
+            tellAboutChild(child);
+        }
+        else if(MaMood){
+            std::cout << child.getName() << " is not my child ,but i love you!" << ".\n";
+        } else cout<< child.getName() << " is not my child ,but i HATE you!" << ".\n";
+    }
+
+    void tellAboutAllChildrenSummary() override {
+        std::vector<Student> childrenCopy = getStudents();
+        std::cout << "Parent " << getName() << " says about all children in summary:\n";
+        if (!childrenCopy.empty()) {
+            cout << "Good childrens!!!\n";
+        }
+    }
+
 };
 
 class Sobranie {
 private:
     std::vector<Parent> Parents;
+    std::vector<GrandMother> Babushki;
     std::vector<Teacher> Teachers;
     std::vector<Lesson> Lessons;
 public:
     //initialization
-    Sobranie(std::vector<Parent>& parents, std::vector<Teacher>& teachers, std::vector<Lesson>& lessons) {
+    Sobranie(std::vector<Parent>& parents, std::vector<Teacher>& teachers, std::vector<Lesson>& lessons, std::vector<GrandMother>& babushki) {
         Parents = parents;
         Teachers = teachers;
         Lessons = lessons;
+        Babushki = babushki;
     };
 
     void StartDiscuss(vector<Student>& studentss) {
         vector<string> ShadowChilds;
         vector<string> LessonStudents;
         Student StudOfParent;
-        Parent StudParent;
         bool TeacherFactor = false;
 
         for (int i = 0; i < Lessons.size(); i++) {
@@ -259,7 +312,9 @@ public:
             for (int j = 0; j < LessonStudents.size(); j++) {
                 //проверим,есть ли у нас родитель этого ученика
                 bool HaveParent = false;
-                // Parent StudParent;
+                bool HaveOldParent = false;
+                Parent StudParent;
+                GrandMother OldParent;
                 for (int g = 0; g < Parents.size(); g++) {
                     if (Parents[g].isChildMe(LessonStudents[j]) == true) {
                         HaveParent = true;
@@ -267,14 +322,25 @@ public:
                          StudOfParent = studentss[j];
                     }
                 }
+                if (HaveParent == false) {
+                    for (int g = 0; g < Babushki.size(); g++) {
+                        if (Babushki[g].isChildMe(LessonStudents[j]) == true) {
+                            HaveOldParent = true;
+                            OldParent = Babushki[g];
+                            StudOfParent = studentss[j];
+                        }
+                    }
+                }
                 //если родителя студента нет - кидаю его в список
-                if (HaveParent == false and find(ShadowChilds.begin(),ShadowChilds.end(),LessonStudents[j]) == ShadowChilds.end())
+                if ((HaveParent == false and HaveOldParent == false) and find(ShadowChilds.begin(),ShadowChilds.end(),LessonStudents[j]) == ShadowChilds.end())
                     ShadowChilds.push_back(LessonStudents[j]);
-                else if (HaveParent!= false){
+                else if (HaveParent!= false or HaveOldParent!=false){
                     vector<int> subjMarks = StudOfParent.getGrades();
                     if (subjMarks.size() >= 1) {
-                        StudParent.tellAboutSpecificChild(StudOfParent);
-
+                        if(HaveParent == true)
+                            StudParent.tellAboutSpecificChild(StudOfParent);
+                        if (HaveOldParent == true)
+                            OldParent.tellAboutSpecificChild(StudOfParent);
                         string Prepod = this->Lessons[i].getTeacherName();
                         for (int i = 0; i < Teachers.size(); i++) {
                             if (Prepod == Teachers[i].getName()) {
@@ -318,6 +384,11 @@ public:
         parents.push_back(Parent(name, goodMood));
     }
 
+    void addGrandParent(const std::string& name, bool goodMood) {
+        GrandMother Baba(name, goodMood);
+        grandparents.push_back(Baba);
+    }
+
     void assignChildToParent(const std::string& parentName, const std::string& childName) {
         auto parentIt = findParent(parentName);
         auto childIt = findStudent(childName);
@@ -330,12 +401,26 @@ public:
         }
     }
 
+    void assignChildToGrandParent(string parentName, string childName) {
+        for (int i = 0; i < grandparents.size(); i++) {
+            if (grandparents[i].getName() == parentName) {
+                for (int g = 0; g < students.size(); g++) {
+                    if (students[g].getName() == childName) {
+                        grandparents[i].addChild(students[g]);
+                        return;
+                    }
+                }
+            }
+        }
+        
+    }
+
     void addLesson(const std::string& teacherName, const std::vector<std::string>& studentNames, int numGradesPerStudent) {
         lessons.push_back(Lesson(teacherName, studentNames, numGradesPerStudent));
     }
 
     void addSobranie() {
-        sobraniya.push_back(Sobranie(parents, teachers, lessons));
+        sobraniya.push_back(Sobranie(parents, teachers, lessons,grandparents));
     }
 
     void StartMeetings() {
@@ -415,6 +500,7 @@ private:
     std::vector<Teacher> teachers;
     std::vector<Lesson> lessons;
     std::vector<Parent> parents;
+    std::vector<GrandMother> grandparents;
     std::vector<Sobranie> sobraniya;
 
     std::vector<Student>::iterator findStudent(const std::string& studentName) {
@@ -495,10 +581,17 @@ int main() {
     // Выводим отличников
     studentManager.printExcellentStudents();
 
+     //добавляем бабушек
+     studentManager.addGrandParent("BabaNATASHA",true);
+     studentManager.addGrandParent("BabaSVETA", false);
+     //связываем к детям
+     studentManager.assignChildToGrandParent("BabaNATASHA", "Eva");
+     studentManager.assignChildToGrandParent("BabaSVETA", "Nick");
+
      //Добавляем собрание
      studentManager.addSobranie();
      //начинаем собрание 
      studentManager.StartMeetings();
-   
+     
     return 0;
 }
